@@ -29,12 +29,12 @@ public class Contact {
     private String linkPrecedence;
 
     @Column(name = "created_At")
-    private LocalDateTime createdAt;
+    private String createdAt;
 
     @Column(name = "updated_At")
-    private LocalDateTime updatedAt;
+    private String updatedAt;
 
     @Column(name = "deleted_At")
-    private LocalDateTime deletedAt;
+    private String deletedAt;
 }
 
