@@ -1,46 +1,40 @@
 package com.amananand.IdentityReconciliation.entities;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "contact")
-@AllArgsConstructor
-@NoArgsConstructor
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class Contact {
-    @ToString.Include
     @Id
-    @Column(nullable = false)
-    private int id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
-    @ToString.Include
+    @Column(name = "phone_Number")
     private String phoneNumber;
 
-    @ToString.Include
+    @Column(name = "email")
     private String email;
 
-    @ToString.Include
+    @Column(name = "linked_Id")
     private Integer linkedId;
 
-    @ToString.Include
-    @Column(nullable = false)
+    @Column(name = "link_Precedence")
     private String linkPrecedence;
 
-    @ToString.Include
-    @Column(nullable = false)
+    @Column(name = "created_At")
     private LocalDateTime createdAt;
 
-    @ToString.Include
-    @Column(nullable = false)
+    @Column(name = "updated_At")
     private LocalDateTime updatedAt;
 
-    @ToString.Include
+    @Column(name = "deleted_At")
     private LocalDateTime deletedAt;
 }
+
