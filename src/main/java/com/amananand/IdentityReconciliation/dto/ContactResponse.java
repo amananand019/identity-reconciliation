@@ -1,17 +1,21 @@
 package com.amananand.IdentityReconciliation.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
 public class ContactResponse {
     private int primaryContactId;
     private List<String> emails;
     private List<String> phoneNumbers;
     private List<Integer> secondaryContactIds;
+
+    public ContactResponse(int primaryContactId) {
+        this.primaryContactId = primaryContactId;
+        this.emails = new ArrayList<>();
+        this.phoneNumbers = new ArrayList<>();
+        this.secondaryContactIds = new ArrayList<>();
+    }
 }

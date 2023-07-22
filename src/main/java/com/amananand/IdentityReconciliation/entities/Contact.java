@@ -3,13 +3,10 @@ package com.amananand.IdentityReconciliation.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "contact")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 public class Contact {
     @Id
@@ -36,5 +33,14 @@ public class Contact {
 
     @Column(name = "deleted_At")
     private String deletedAt;
+
+    public Contact(String phoneNumber, String email, Integer linkedId, String linkPrecedence, String createdAt, String updatedAt) {
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.linkedId = linkedId;
+        this.linkPrecedence = linkPrecedence;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 }
 
