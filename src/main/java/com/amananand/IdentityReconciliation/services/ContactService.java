@@ -13,4 +13,7 @@ public class ContactService {
         this.contactRepository = contactRepository;
     }
 
+    public String check(){
+        return "Service working";
+    }
 }
