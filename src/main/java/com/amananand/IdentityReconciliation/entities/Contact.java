@@ -1,4 +1,4 @@
-package com.amananand.IdentityReconciliation.entity;
+package com.amananand.IdentityReconciliation.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
