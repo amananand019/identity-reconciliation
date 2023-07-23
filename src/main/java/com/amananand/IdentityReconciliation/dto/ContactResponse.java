@@ -12,8 +12,7 @@ public class ContactResponse {
     private List<String> phoneNumbers;
     private List<Integer> secondaryContactIds;
 
-    public ContactResponse(int primaryContactId) {
-        this.primaryContactId = primaryContactId;
+    public ContactResponse() {
         this.emails = new ArrayList<>();
         this.phoneNumbers = new ArrayList<>();
         this.secondaryContactIds = new ArrayList<>();
