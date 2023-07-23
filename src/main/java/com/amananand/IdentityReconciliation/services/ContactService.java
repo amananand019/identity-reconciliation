@@ -1,6 +1,8 @@
 package com.amananand.IdentityReconciliation.services;
 
+import com.amananand.IdentityReconciliation.dto.ContactRequest;
 import com.amananand.IdentityReconciliation.dto.ContactResponse;
+import com.amananand.IdentityReconciliation.dto.IdentityPayloadDTO;
 import com.amananand.IdentityReconciliation.entities.Contact;
 import com.amananand.IdentityReconciliation.entities.LinkPrecedence;
 import com.amananand.IdentityReconciliation.repositories.ContactRepository;
@@ -23,7 +25,12 @@ public class ContactService {
         this.contactRepository = contactRepository;
     }
 
-    public ContactResponse identifyService(String requestEmail, String requestPhoneNumber){
+    public IdentityPayloadDTO identityService(ContactRequest contactRequest){
+        ContactResponse contactResponse = identifyContactService(contactRequest.getEmail(), contactRequest.getPhoneNumber());
+        return new IdentityPayloadDTO(contactResponse);
+    }
+
+    public ContactResponse identifyContactService(String requestEmail, String requestPhoneNumber){
         if(requestEmail != null && requestEmail.length() == 0)
             requestEmail = null;
 

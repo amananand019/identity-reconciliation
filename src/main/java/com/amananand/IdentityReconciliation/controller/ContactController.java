@@ -2,6 +2,7 @@ package com.amananand.IdentityReconciliation.controller;
 
 import com.amananand.IdentityReconciliation.dto.ContactRequest;
 import com.amananand.IdentityReconciliation.dto.ContactResponse;
+import com.amananand.IdentityReconciliation.dto.IdentityPayloadDTO;
 import com.amananand.IdentityReconciliation.services.ContactService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,8 +21,8 @@ public class ContactController {
     }
 
     @PostMapping("/identify")
-    private ResponseEntity<ContactResponse> identify(@RequestBody ContactRequest request){
-        ContactResponse response = contactService.identifyService(request.getEmail(), request.getPhoneNumber());
+    private ResponseEntity<IdentityPayloadDTO> identifyContact(@RequestBody ContactRequest request){
+        IdentityPayloadDTO response = contactService.identityService(request);
 
         if(response != null){
             return ResponseEntity.ok(response);
