@@ -10,5 +10,7 @@ import java.util.List;
 public interface ContactRepository extends JpaRepository<Contact, Integer> {
     List<Contact> findByEmailOrPhoneNumber(String email, String phoneNumber);
 
+    List<Contact> findByEmailAndPhoneNumber(String email, String phoneNumber);
+
     List<Contact> findByLinkedId(Integer linkedId);
 }

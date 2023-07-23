@@ -4,10 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "contact")
+@Builder
 @Getter
 @Setter
+@AllArgsConstructor
 @NoArgsConstructor
+@Table(name = "contact")
 public class Contact {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,8 +24,9 @@ public class Contact {
     @Column(name = "linked_Id")
     private Integer linkedId;
 
-    @Column(name = "link_Precedence")
-    private String linkPrecedence;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "link_Precedence", nullable = false)
+    private LinkPrecedence linkPrecedence;
 
     @Column(name = "created_At")
     private String createdAt;
@@ -33,14 +36,5 @@ public class Contact {
 
     @Column(name = "deleted_At")
     private String deletedAt;
-
-    public Contact(String phoneNumber, String email, Integer linkedId, String linkPrecedence, String createdAt, String updatedAt) {
-        this.phoneNumber = phoneNumber;
-        this.email = email;
-        this.linkedId = linkedId;
-        this.linkPrecedence = linkPrecedence;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
 }
 

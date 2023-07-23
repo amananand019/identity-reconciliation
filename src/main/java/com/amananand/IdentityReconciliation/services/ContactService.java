@@ -7,6 +7,8 @@ import com.amananand.IdentityReconciliation.repositories.ContactRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -14,6 +16,7 @@ import java.util.*;
 @Service
 public class ContactService {
     private final ContactRepository contactRepository;
+    private final String dateTimePattern = "dd-MM-yyyy HH:mm:ss.SSS XXX";
 
     @Autowired
     public ContactService(ContactRepository contactRepository) {
@@ -21,81 +24,127 @@ public class ContactService {
     }
 
     public ContactResponse identifyService(String requestEmail, String requestPhoneNumber){
-        if(!(requestPhoneNumber != null || requestEmail != null)){
-            throw new RuntimeException("Both phoneNumber and Email are null");
-        }
+        if(requestEmail != null && requestEmail.length() == 0)
+            requestEmail = null;
+
+        if(requestPhoneNumber != null && requestPhoneNumber.length() == 0)
+            requestPhoneNumber = null;
+
+        if(!(requestPhoneNumber != null || requestEmail != null))
+            throw new RuntimeException("Both phoneNumber and Email are empty");
 
         List<Contact> contactList = contactRepository.findByEmailOrPhoneNumber(requestEmail, requestPhoneNumber);
 
         if(contactList.isEmpty()){
-//            List empty means there is no contact present having either email or phoneNumber which is requested
-
-            String currDateTime = getCurrentDateTime();
-            Contact contact = new Contact(requestPhoneNumber, requestEmail, null, LinkPrecedence.PRIMARY.toString(), currDateTime, currDateTime);
-            Contact savedContact = contactRepository.save(contact);
-
-            ContactResponse contactResponse = new ContactResponse();
-            contactResponse.setPrimaryContactId(savedContact.getId());
-
-            if(requestEmail != null)
-                contactResponse.getEmails().add(savedContact.getEmail());
-
-            if(requestPhoneNumber != null)
-                contactResponse.getPhoneNumbers().add(savedContact.getPhoneNumber());
-
-            return contactResponse;
+//          List empty means there is no contact present having either email or phoneNumber which is requested
+            Contact savedContact = savedContactToRepo(requestPhoneNumber, requestEmail, null, LinkPrecedence.PRIMARY);
+            return createContactResponse(savedContact, new ArrayList<>());
         } else {
             Set<Integer> primaryIdSet = findPrimaryContacts(contactList);
-            Set<String> uniqueEmails = new HashSet<>();
-            Set<String> uniquePhones = new HashSet<>();
-            List<Integer> secondaryIds = new ArrayList<>();
+            List<Contact> contacts = new ArrayList<>();
 
-            ContactResponse contactResponse = new ContactResponse();
-
-            if(primaryIdSet.size() == 1){
-                int primaryId = primaryIdSet.stream().findFirst().get();
-
-                List<Contact> contacts = contactRepository.findByLinkedId(primaryId);
-
-                for(Contact contact: contacts){
-                    if(contact.getDeletedAt() != null)
-                        continue;
-
-                    secondaryIds.add(contact.getId());
-                    String phone = contact.getPhoneNumber();
-                    if(phone != null && phone.length() > 0)
-                        uniquePhones.add(phone);
-
-                    String email = contact.getEmail();
-                    if(email != null && email.length() > 0)
-                        uniqueEmails.add(email);
-                }
-
-                Optional<Contact> primaryContact = contactRepository.findById(primaryId);
-                if(primaryContact.get().getPhoneNumber() != null && primaryContact.get().getPhoneNumber().length() > 0){
-                    uniquePhones.add(primaryContact.get().getPhoneNumber());
-                }
-
-                if(primaryContact.get().getEmail() != null && primaryContact.get().getEmail().length() > 0){
-                    uniqueEmails.add(primaryContact.get().getEmail());
-                }
-
-                contactResponse.setPrimaryContactId(primaryId);
-                contactResponse.getSecondaryContactIds().addAll(secondaryIds);
-                contactResponse.getPhoneNumbers().addAll(uniquePhones);
-                contactResponse.getEmails().addAll(uniqueEmails);
-
-                return contactResponse;
-            } else {
-//                  Two primary Ids present, means keep the contact as primary which was created first
-//                  and update the other contact as secondary, Also update its secondary contacts with current primary id
-                return null;
+            for(Integer primary: primaryIdSet){
+                contacts.add(contactRepository.findById(primary).orElse(null));
+                contacts.addAll(contactRepository.findByLinkedId(primary));
             }
+
+//            Sort contacts based on createdAt timestamp
+            sortByCreatedAt(contacts);
+
+            Contact primaryContact = contacts.get(0);
+            if(requestEmail == null || requestPhoneNumber == null){
+                return createContactResponse(primaryContact, contacts);
+            }
+
+//            Check if any new information available
+            boolean phoneIsPresent = false, emailIsPresent = false;
+            for(Contact c: contactList){
+                if(requestPhoneNumber.equals(c.getPhoneNumber()))
+                    phoneIsPresent = true;
+
+                if(requestEmail.equals(c.getEmail()))
+                    emailIsPresent = true;
+
+//                if there is already a contact with same detail then no need to go further just return the response
+                if(requestEmail.equals(c.getEmail()) && requestPhoneNumber.equals(c.getPhoneNumber())){
+                    return createContactResponse(primaryContact, contacts);
+                }
+            }
+
+            if(phoneIsPresent && emailIsPresent){
+//              Both phone no. and email are present in it but in different contacts
+//                So it need to update linkedId and LinkPrecedence if any other primary contact is present
+                for(Contact contact: contacts){
+                    if(!Objects.equals(contact.getId(), primaryContact.getId())
+                            && !Objects.equals(contact.getLinkedId(), primaryContact.getId())){
+                        contact.setLinkedId(primaryContact.getId());
+                        contact.setLinkPrecedence(LinkPrecedence.SECONDARY);
+                        contact.setUpdatedAt(getCurrentDateTime());
+                        contactRepository.save(contact);
+                    }
+                }
+            } else {
+                Contact savedContact = savedContactToRepo(requestPhoneNumber, requestEmail, primaryContact.getId(), LinkPrecedence.SECONDARY);
+                contacts.add(savedContact);
+            }
+            return createContactResponse(primaryContact, contacts);
         }
     }
 
-    private HashSet<Integer> findPrimaryContacts(List<Contact> contacts){
-        HashSet<Integer> primaryIdSet = new HashSet<>();
+    private ContactResponse createContactResponse(Contact primaryContact, List<Contact> otherContacts){
+        List<String> emailsList = new ArrayList<>();
+        List<String> phoneNumbersList = new ArrayList<>();
+        List<Integer> secondaryContactIds = new ArrayList<>();
+
+        emailsList.add(primaryContact.getEmail());
+        phoneNumbersList.add(primaryContact.getPhoneNumber());
+
+        HashSet<String> uniqueEmails = new HashSet<>();
+        HashSet<String> uniquePhones = new HashSet<>();
+
+        uniqueEmails.add(primaryContact.getEmail());
+        uniquePhones.add(primaryContact.getPhoneNumber());
+
+        for(Contact contact: otherContacts){
+            if(!uniqueEmails.contains(contact.getEmail())){
+                uniqueEmails.add(contact.getEmail());
+                emailsList.add(contact.getEmail());
+            }
+
+            if (!uniquePhones.contains(contact.getPhoneNumber())) {
+                uniquePhones.add(contact.getPhoneNumber());
+                phoneNumbersList.add(contact.getPhoneNumber());
+            }
+
+            if (contact.getLinkPrecedence().equals(LinkPrecedence.SECONDARY)) {
+                secondaryContactIds.add(contact.getId());
+            }
+        }
+
+        return ContactResponse.builder()
+                .primaryContactId(primaryContact.getId())
+                .emails(emailsList)
+                .phoneNumbers(phoneNumbersList)
+                .secondaryContactIds(secondaryContactIds)
+                .build();
+    }
+
+    private Contact savedContactToRepo(String phoneNumber, String email, Integer linkedId, LinkPrecedence linkPrecedence){
+        String currTime = getCurrentDateTime();
+        Contact newContact = Contact.builder()
+                .phoneNumber(phoneNumber)
+                .email(email)
+                .linkPrecedence(linkPrecedence)
+                .linkedId(linkedId)
+                .createdAt(currTime)
+                .updatedAt(currTime)
+                .build();
+
+        return contactRepository.save(newContact);
+    }
+
+    private Set<Integer> findPrimaryContacts(List<Contact> contacts){
+        Set<Integer> primaryIdSet = new HashSet<>();
         for(Contact contact: contacts){
             Integer linkedId = contact.getLinkedId();
             if(linkedId != null){
@@ -109,8 +158,20 @@ public class ContactService {
 
 
     private String getCurrentDateTime(){
-        String dateTimePattern = "dd-MM-yyyy HH:mm:ss.SSS XXX";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateTimePattern);
         return ZonedDateTime.now().format(formatter);
+    }
+
+    private void sortByCreatedAt(List<Contact> contacts){
+        SimpleDateFormat formatter = new SimpleDateFormat(dateTimePattern);
+        contacts.sort((a, b) -> {
+            try {
+                Date dateTime1 = formatter.parse(a.getCreatedAt());
+                Date dateTime2 = formatter.parse(b.getCreatedAt());
+                return dateTime1.compareTo(dateTime2);
+            } catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }
