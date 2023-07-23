@@ -5,6 +5,7 @@ import com.amananand.IdentityReconciliation.dto.ContactResponse;
 import com.amananand.IdentityReconciliation.dto.IdentityPayloadDTO;
 import com.amananand.IdentityReconciliation.entities.Contact;
 import com.amananand.IdentityReconciliation.entities.LinkPrecedence;
+import com.amananand.IdentityReconciliation.exceptions.InvalidInputException;
 import com.amananand.IdentityReconciliation.repositories.ContactRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class ContactService {
             requestPhoneNumber = null;
 
         if(!(requestPhoneNumber != null || requestEmail != null))
-            throw new RuntimeException("Both phoneNumber and Email are empty");
+            throw new InvalidInputException("Invalid Input: Both email and phone number cannot be empty at the same time");
 
         List<Contact> contactList = contactRepository.findByEmailOrPhoneNumber(requestEmail, requestPhoneNumber);
 
